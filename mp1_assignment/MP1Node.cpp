@@ -116,6 +116,7 @@ int MP1Node::initThisNode(Address *joinaddr) {
  * FUNCTION NAME: introduceSelfToGroup
  *
  * DESCRIPTION: Join the distributed system
+ * joinaddr: the address of the coordinator
  */
 int MP1Node::introduceSelfToGroup(Address *joinaddr) {
 	MessageHdr *msg;
@@ -145,6 +146,8 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
 #endif
 
         // send JOINREQ message to introducer member
+		// &memberNode->addr: the address of this node
+		// joinaddr: the address of the coordinator
         emulNet->ENsend(&memberNode->addr, joinaddr, (char *)msg, msgsize);
 
         free(msg);
@@ -218,6 +221,7 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	/*
 	 * Your code goes here
 	 */
+	 cout<<"Yo, received a new message: " << data <<endl;
 }
 
 /**

@@ -61,7 +61,9 @@ Application::Application(char *infile) {
 		memberNode->inited = false;
 		Address *addressOfMemberNode = new Address();
 		Address joinaddr;
+		// get the coordinator's address
 		joinaddr = getjoinaddr();
+		// addressOfMemberNode is set to initialize each node's own addres
 		addressOfMemberNode = (Address *) en->ENinit(addressOfMemberNode, par->PORTNUM);
 		mp1[i] = new MP1Node(memberNode, par, en, log, addressOfMemberNode);
 		log->LOG(&(mp1[i]->getMemberNode()->addr), "APP");

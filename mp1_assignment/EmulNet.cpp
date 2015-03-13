@@ -80,7 +80,8 @@ void *EmulNet::ENinit(Address *myaddr, short port) {
  * FUNCTION NAME: ENsend
  *
  * DESCRIPTION: EmulNet send function
- *
+ * myaddr: the address this message coming from
+ * toaddr: the destination address
  * RETURNS:
  * size
  */
