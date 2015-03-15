@@ -20,6 +20,8 @@
  */
 #define TREMOVE 20
 #define TFAIL 5
+#define GOSSIPYSIZE 5
+#define TIMEOUT 10
 
 /*
  * Note: You can change/add any functions in MP1Node.{h,cpp}
@@ -55,6 +57,9 @@ private:
 	Params *par;
 	Member *memberNode;
 	char NULLADDR[6];
+	void handleJoinRequest(char *, int);
+	void handleGossipyRequest(char *, int);
+	void propagateMemberList(MemberListEntry, Member *);
 
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);
