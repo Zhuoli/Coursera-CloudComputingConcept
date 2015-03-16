@@ -11,6 +11,59 @@
  * Note: You can change/add any functions in MP1Node.{h,cpp}
  */
 
+//class Message{
+//private:
+//	int size=0;
+//	char* buf=NULL;
+//
+//public:
+//	Message();
+//	//JOINREQ message: JOINREQ, Address, Heartbeat
+//	void SetJoiner(MessageHdr,Address,long);
+//	//JOINREP message: JOINREP,Address,Heartbeat,MemberEntryList
+//	void setJoinep(MessageHdr,Address,long,vector<MemberListEntry>);
+//
+//	// return MessageHdr
+//	MessageHdr* getMessageType();
+//	Address* getAddress();
+//	long getHeartBeat();
+//	vector<MemberListEntry> getMemberListEntry();
+//
+//};
+
+Message::Message(){
+
+}
+void Message::SetJoiner(Address address,long heartbeat){
+	size_t msize = sizeof(MessageHdr) + sizeof(address.addr)+sizeof(long);
+	buf=(char*)malloc(msize * sizeof(char));
+
+    // create JOINREQ message: format of data is {struct Address myaddr}
+	MessageHdr *msg= (MessageHdr*)buf;
+    msg->msgType = JOINREQ;
+    //msg + sizeof(MessageHdr)
+    memcpy((char *)(msg+1), &address.addr, sizeof(address.addr));
+    //msg + sizeof(MessageHdr) + sizeof(address.addr)
+    memcpy((char *)(msg+1) + sizeof(address.addr), &heartbeat, sizeof(long));
+}
+
+MessageHdr* Message::getMessageType(){
+	MessageHdr *msg = (MessageHdr*) buf;
+	return msg;
+}
+
+
+Address* Message::getAddress(){
+	Address* addr=new Address();
+	memcpy(&addr->addr,this->buf+sizeof(MessageHdr),6);
+	return addr;
+}
+
+long Message::getHeartbeat(){
+	return (long) (buf+sizeof(MessageHdr) + 6);
+}
+
+
 /**
  * Overloaded Constructor of the MP1Node class
  * You can add new members to the class if you think it
@@ -230,10 +283,10 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
     #endif
 	 switch(msgType->msgType){
 	 	 case     JOINREQ :
-	 		 handleJoinRequest(data,size);
+	 		 handleJoinRequest(data+sizeof(MessageHdr),size-sizeof(MessageHdr));
 	 		 break;
 	 	 case 	   JOINREP :
-	 		handleGossipyRequest(data,size);
+	 		handleGossipyRequest(data+sizeof(MessageHdr),size-sizeof(MessageHdr));
 	 		 break;
 	 	 case      DUMMYLASTMSGTYPE : cout << " DUMMYLASTMSGTYPE "<<endl; break;
 	 }
@@ -286,9 +339,8 @@ void MP1Node::handleGossipyRequest(char *data, int size){
 //	short port=0;
 //	long heartBeat;
 //
-//	// set value
-//	data = data + sizeof(MessageHdr);
-//	size -=sizeof(MessageHdr);
+	std::string str(data);
+	cout<<"JOINREP from "<<str<<endl;
 //
 //	memcpy(&id, data,sizeof(int));
 //	memcpy(&srcAddr->addr[0], &id,sizeof(int));
@@ -331,9 +383,6 @@ void MP1Node::handleJoinRequest(char *data, int size){
 	short port=0;
 	long heartBeat;
 
-	// set value
-	data = data + sizeof(MessageHdr);
-	size -=sizeof(MessageHdr);
 	srcAddr->init();
 	memcpy(&id, data,sizeof(int));
 	memcpy(&srcAddr->addr[0], &id,sizeof(int));
@@ -415,34 +464,20 @@ void MP1Node::propagateMemberList(MemberListEntry memberEntry, Member *member){
 		entryStr += to_string(member->memberList[i].id)+":"+to_string(member->memberList[i].port)+to_string(member->memberList[i].heartbeat)+"|";
 		sendStr += entryStr;
 	}
-
+	sendStr="hello world";
 	size_t msgsize = sizeof(MessageHdr) + sendStr.size()+1;
 	msg = (MessageHdr *) malloc(msgsize * sizeof(char));
 	msg->msgType = JOINREP;
 	strncpy((char*)(msg+sizeof(MessageHdr)),sendStr.c_str(),sendStr.size()+1);
 
-//	// msgtype:addr:heartbeat:ListMember
-//	size_t msgsize = sizeof(MessageHdr) + sizeof(member->memberList)  + sizeof(address->addr)+ sizeof(long)+1;
-//    msg = (MessageHdr *) malloc(msgsize * sizeof(char));
-//
-//    // create JOINREP message: format of data is {struct Address myaddr}
-//    char* data=(char*)msg;
-//    msg->msgType = JOINREP;
-//    data += sizeof(MessageHdr);
-//
-//    memcpy(data, &memberNode->addr.addr, sizeof(memberNode->addr.addr));
-//    data += 6;
-//
-//    memcpy(data, &memberNode->heartbeat, sizeof(long));
-//    data += sizeof(long);
-//
-//    memcpy(data,&member->memberList,sizeof(member->memberList));
-//    data+=sizeof(member->memberList);
+	char* p=(char*)(msg+sizeof(MessageHdr));
+
 
 
     // send JOINREP message to introducer member
 	// &memberNode->addr: the address of this node
 	// address: the address of the target
+	char * mp=(char*)msg;
     emulNet->ENsend(&memberNode->addr, address, (char *)msg, msgsize);
 
     free(msg);

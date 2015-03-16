@@ -83,4 +83,24 @@ public:
 	virtual ~MP1Node();
 };
 
+class Message{
+private:
+	int size=0;
+	char* buf=NULL;
+
+public:
+	Message();
+	//JOINREQ message: JOINREQ, Address, Heartbeat
+	void SetJoiner(Address,long);
+	//JOINREP message: JOINREP,Address,Heartbeat,MemberEntryList
+	void setJoinep(Address,long,vector<MemberListEntry>);
+
+	// return MessageHdr
+	MessageHdr* getMessageType();
+	Address* getAddress();
+	long getHeartbeat();
+	vector<MemberListEntry> getMemberListEntry();
+	char* getBuf();
+};
+
 #endif /* _MP1NODE_H_ */
