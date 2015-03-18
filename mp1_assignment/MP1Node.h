@@ -50,6 +50,31 @@ typedef struct MessageHdr {
  *
  * DESCRIPTION: Class implementing Membership protocol functionalities for failure detection
  */
+
+class Message{
+private:
+	int size=0;
+	char* buf=NULL;
+
+public:
+	Message();
+	Message(char *);
+	//JOINREQ message: JOINREQ, Address, Heartbeat
+	void SetJoiner(Address,long);
+	//JOINREP message: JOINREP,Address,Heartbeat,MemberEntryList
+	void setJoinep(Address,long,vector<MemberListEntry>);
+
+	// return MessageHdr
+	MsgTypes getMessageType();
+	Address* getAddress();
+	int getId();
+	short getPort();
+	long getHeartbeat();
+	vector<MemberListEntry> getMemberListEntry();
+	char* getBuf();
+	int getSize();
+};
+
 class MP1Node {
 private:
 	EmulNet *emulNet;
@@ -57,7 +82,7 @@ private:
 	Params *par;
 	Member *memberNode;
 	char NULLADDR[6];
-	void handleJoinRequest(char *, int);
+	void handleJoinRequest(Message*);
 	void handleGossipyRequest(char *, int);
 	void propagateMemberList(MemberListEntry, Member *);
 
@@ -83,24 +108,5 @@ public:
 	virtual ~MP1Node();
 };
 
-class Message{
-private:
-	int size=0;
-	char* buf=NULL;
-
-public:
-	Message();
-	//JOINREQ message: JOINREQ, Address, Heartbeat
-	void SetJoiner(Address,long);
-	//JOINREP message: JOINREP,Address,Heartbeat,MemberEntryList
-	void setJoinep(Address,long,vector<MemberListEntry>);
-
-	// return MessageHdr
-	MessageHdr* getMessageType();
-	Address* getAddress();
-	long getHeartbeat();
-	vector<MemberListEntry> getMemberListEntry();
-	char* getBuf();
-};
 
 #endif /* _MP1NODE_H_ */

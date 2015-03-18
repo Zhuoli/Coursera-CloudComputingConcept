@@ -47,9 +47,6 @@ MemberListEntry::MemberListEntry(int id, short port, long heartbeat, long timest
  */
 MemberListEntry::MemberListEntry(int id, short port): id(id), port(port) {}
 
-/**
- * Copy constructor
- */
 MemberListEntry::MemberListEntry(const MemberListEntry &anotherMLE) {
 	this->heartbeat = anotherMLE.heartbeat;
 	this->id = anotherMLE.id;
