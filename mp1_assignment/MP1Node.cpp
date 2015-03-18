@@ -21,7 +21,7 @@
 //	//JOINREQ message: JOINREQ, Address, Heartbeat
 //	void SetJoiner(MessageHdr,Address,long);
 //	//JOINREP message: JOINREP,Address,Heartbeat,MemberEntryList
-//	void setJoinep(MessageHdr,Address,long,vector<MemberListEntry>);
+//	void setJoinep(Address,long,vector<MemberListEntry>);
 //
 //	// return MessageHdr
 //	MessageHdr* getMessageType();
@@ -45,6 +45,10 @@ void Message::SetJoiner(Address address,long heartbeat){
     memcpy((char *)(msg+1), &address.addr, sizeof(address.addr));
     //msg + sizeof(MessageHdr) + sizeof(address.addr)
     memcpy((char *)(msg+1) + sizeof(address.addr), &heartbeat, sizeof(long));
+}
+void Message::setJoinep(Address address,long heartbeat,vector<MemberListEntry> memberList){
+	size_t msize = sizeof(MessageHdr) + sizeof(address.addr)+sizeof(long) + sizeof(memberList);
+	size
 }
 
 MessageHdr* Message::getMessageType(){
