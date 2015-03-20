@@ -11,31 +11,18 @@
  * Note: You can change/add any functions in MP1Node.{h,cpp}
  */
 
-//class Message{
-//private:
-//	int size=0;
-//	char* buf=NULL;
-//
-//public:
-//	Message();
-//	//JOINREQ message: JOINREQ, Address, Heartbeat
-//	void SetJoiner(MessageHdr,Address,long);
-//	//JOINREP message: JOINREP,Address,Heartbeat,MemberEntryList
-//	void setJoinep(Address,long,vector<MemberListEntry>);
-//
-//	// return MessageHdr
-//	MessageHdr* getMessageType();
-//	Address* getAddress();
-//	long getHeartBeat();
-//	vector<MemberListEntry> getMemberListEntry();
-//
-//};
 
 Message::Message(){
 
 }
-Message::Message(char* b){
+Message::Message(char* b,size_t size){
 	this->buf=b;
+	this->getMessageType();
+	this->getAddress();
+	this->getHeartbeat();
+	this->getId();
+	this->getPort();
+	this->size = size;
 }
 
 // create JOINREQ message: format of data is {MessageHdr,Address.char[6],long heartbeat}
@@ -48,6 +35,7 @@ void Message::SetJoiner(Address address,long heartbeat){
     memcpy((char *)(msg+1), &address.addr, 6);
     //msg + sizeof(MessageHdr) + sizeof(address.addr)
     memcpy((char *)(msg+1) + sizeof(address.addr), &heartbeat, sizeof(long));
+    this->size = msize;
 }
 
 // create JOINREP message: format of data is {MessageHdr,Address.char[6],long heartbeat,[MemberListEntry|]}
@@ -64,47 +52,58 @@ void Message::setJoinep(Address address,long heartbeat,vector<MemberListEntry> m
     memcpy((char *)(msg+1), &address.addr, sizeof(address.addr));
     //msg + sizeof(MessageHdr) + sizeof(address.addr)
     memcpy((char *)(msg+1) + sizeof(address.addr), &heartbeat, sizeof(long));
-    char* p = (char *)(msg+1) + sizeof(address.addr) + sizeof(long);
+    MemberListEntry* p = (MemberListEntry *)((char *)(msg+1) + sizeof(address.addr) + sizeof(long));
 
 	for(int i=0;i<memberList.size();i++){
-		MemberListEntry *entry = (MemberListEntry*)buf;
-	    memcpy(p, &entry, sizeof(*entry));
-		cout << "Id: "<<entry->id<<" port: " << entry->port << " heartbeat: " << entry->heartbeat << "timestamp:" << entry->timestamp << endl;
+		MemberListEntry entry = memberList[i];
+	    memcpy(p, &entry, sizeof(entry));
+	    p+=1;
 	}
+	this->size = msize;
 }
 
 char* Message::getBuf(){
 	return this->buf;
 }
 
-int Message::getSize(){
-	if(this->size==0){
+size_t Message::getSize(){
+	if(this->size==-1){
 		this->size=sizeof(*this->buf);
 	}
 	return this->size;
 }
 MsgTypes Message::getMessageType(){
-	MessageHdr *msg = (MessageHdr*) this->buf;
-	return msg->msgType;
+	this->messageType = ((MessageHdr*) this->buf)->msgType;
+	return this->messageType;
 }
 
 Address* Message::getAddress(){
-	Address* addr=new Address();
-	MessageHdr *msg= (MessageHdr*)this->buf;
-	memcpy(&addr->addr,(char *)(msg+1),6);
-	return addr;
+	if(this->address == NULL){
+		Address* addr=new Address();
+		MessageHdr *msg= (MessageHdr*)this->buf;
+		memcpy(&addr->addr,(char *)(msg+1),6);
+		this->address= addr;
+	}
+	return this->address;
 }
 
 int Message::getId(){
-	int id = *(int*)(&this->getAddress()->addr);
+	if(this->id==-1){
+		this->id = *(int*)(&this->getAddress()->addr);
+	}
 	return id;
 }
 short Message::getPort(){
-	short port = *(short*)(&this->getAddress()->addr[4]);
+	if(this->port==-1){
+		this->port = *(short*)(&this->getAddress()->addr[4]);
+	}
 	return port;
 }
 long Message::getHeartbeat(){
-	return (long)*(buf+sizeof(MessageHdr) + 6);
+	if(this->heartbeat==-1){
+		this->heartbeat = (long)*(buf+sizeof(MessageHdr) + 6);
+	}
+	return this->heartbeat;
 }
 
 
@@ -231,21 +230,13 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
     	Message* message = new Message();
     	message->SetJoiner(memberNode->addr,memberNode->heartbeat);
 
-    	cout<<"Original Addr: "<<message->getAddress()->getAddress() << " Id: " <<message->getId() << " Port: " << message->getPort() <<endl;
-    	cout<<"Original heartbeat: " << message->getHeartbeat()<<endl;
-
-    	char* buf = message->getBuf();
-    	Message* rcvMsg = new Message(buf);
-    	cout<<"Received Addr: "<<(rcvMsg->getAddress())->getAddress()<< " Id: " <<rcvMsg->getId() << " Port: " << rcvMsg->getPort() <<endl;
-    	cout<<"heartbeat: " << rcvMsg->getHeartbeat()<<endl;
-
 #ifdef DEBUGLOG
         sprintf(s, "Trying to join...");
         log->LOG(&memberNode->addr, s);
 #endif
 
-        // send JOINREQ message to introducer member
-		// &memberNode->addr: the address of this node
+        // send JOINREQ message to introfducer member
+		// &memberNode->addr: the address of this noded
 		// joinaddr: the address of the coordinator
         emulNet->ENsend(&memberNode->addr, joinaddr, message->getBuf(), message->getSize());
 
@@ -321,7 +312,7 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	 */
 	this->memberNode->inGroup = true;
 	 Member *memberNode = (Member *) env;
-	 Message* message=new Message(data);
+	 Message* message=new Message(data,(size_t)size);
 	#ifdef DEBUGLOG
 	 	 cout<<"Yo, " << memberNode->addr.getAddress() << " received a new message: ";
     #endif
@@ -338,11 +329,11 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 }
 void updateMemberList(Member *memberNode, long currenttime, vector<MemberListEntry> newMemberList, Address* srcAddress){
 	#ifdef DEBUGLOG
-		cout <<endl;
-		cout <<"node: " << memberNode->addr.getAddress() << " memberList received from: " << srcAddress->getAddress() <<endl;
-		for(int i=0; i <newMemberList.size();i++){
-			cout<<"address: " << newMemberList[i].id<<" heartbeat: " << newMemberList[i].heartbeat <<endl;
-		}
+//		cout <<endl;
+//		cout <<"node: " << memberNode->addr.getAddress() << " memberList received from: " << srcAddress->getAddress() <<endl;
+//		for(int i=0; i <newMemberList.size();i++){
+//			cout<<"address: " << newMemberList[i].id<<" heartbeat: " << newMemberList[i].heartbeat <<endl;
+//		}
 	#endif
 	for(int i=0;i<memberNode->memberList.size();i++){
 		for(int k=0;k<newMemberList.size();k++){
@@ -363,10 +354,10 @@ void updateMemberList(Member *memberNode, long currenttime, vector<MemberListEnt
 		}
 	}
 	#ifdef DEBUGLOG
-		cout <<" after update, node " << memberNode->addr.getAddress()<<" 's memberList:"<<endl;
-		for(int i=0; i <memberNode->memberList.size();i++){
-			cout<<"address: " << memberNode->memberList[i].id<<" heartbeat: " << memberNode->memberList[i].heartbeat <<endl;
-		}
+//		cout <<" after update, node " << memberNode->addr.getAddress()<<" 's memberList:"<<endl;
+//		for(int i=0; i <memberNode->memberList.size();i++){
+//			cout<<"address: " << memberNode->memberList[i].id<<" heartbeat: " << memberNode->memberList[i].heartbeat <<endl;
+//		}
 	#endif
 }
 
@@ -445,9 +436,11 @@ void MP1Node::nodeLoopOps() {
 		MemberListEntry memberListEntry = memberNode->memberList[i];
 		if(this->memberNode->heartbeat - memberListEntry.heartbeat >= 2 * TIMEOUT){
 			#ifdef DEBUGLOG
-				cout<<"time out"<<memberNode->memberList[i].id<<endl;
+				cout<<"time out "<< memberNode->memberList[i].id<< "   " << this->memberNode->addr.getAddress()<<" gona erase memberlist entry: " << memberNode->memberList[i].id<<endl;
+				cout<<" before erase size: "<<memberNode->memberList.size()<<endl;
 			#endif
 			memberNode->memberList.erase(memberNode->memberList.begin()+i);
+				cout<<" after erase size: "<<memberNode->memberList.size()<<endl;
 			continue;
 		}
 		i++;
@@ -479,33 +472,18 @@ void MP1Node::propagateMemberList(MemberListEntry memberEntry, Member *member){
 	if(memberID == memberEntry.id){
 		return;
 	}
-	MessageHdr *msg;
 	int id = memberEntry.id;
 	short port = memberEntry.port;
 	Address* address = createAddress(id,port);
+	size_t msgsize=0;
 
-	string sendStr="";
-	// address,heartbeat,memberEntry1|memberEntry2|...|
-	sendStr = sendStr+"," + member->addr.getAddress() + ","+to_string(member->heartbeat)+",";
-	for(int i=0; i < member->memberList.size(); i++){
-		string entryStr="";
-		entryStr += to_string(member->memberList[i].id)+":"+to_string(member->memberList[i].port)+to_string(member->memberList[i].heartbeat)+"|";
-		sendStr += entryStr;
-	}
-	sendStr="hello world";
-	size_t msgsize = sizeof(MessageHdr) + sendStr.size()+1;
-	msg = (MessageHdr *) malloc(msgsize * sizeof(char));
-	msg->msgType = JOINREP;
-	strncpy((char*)(msg+sizeof(MessageHdr)),sendStr.c_str(),sendStr.size()+1);
-
-	char* p=(char*)(msg+sizeof(MessageHdr));
-
+	Message *msg = new Message();
+	msg->setJoinep(*address,memberEntry.heartbeat,member->memberList);
 
 
     // send JOINREP message to introducer member
 	// &memberNode->addr: the address of this node
 	// address: the address of the target
-	char * mp=(char*)msg;
     emulNet->ENsend(&memberNode->addr, address, (char *)msg, msgsize);
 
     free(msg);

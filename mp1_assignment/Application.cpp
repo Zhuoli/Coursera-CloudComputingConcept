@@ -5,6 +5,7 @@
  **********************************/
 
 #include "Application.h"
+#include "UnitTest.h"
 
 void handler(int sig) {
 	void *array[10];
@@ -38,6 +39,8 @@ int main(int argc, char *argv[]) {
 	// When done delete the application object
 	delete(app);
 
+//	UnitTest* unitTest = new UnitTest();
+//	unitTest->Test_Message();
 	return SUCCESS;
 }
 

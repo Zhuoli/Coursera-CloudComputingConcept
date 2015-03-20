@@ -53,12 +53,17 @@ typedef struct MessageHdr {
 
 class Message{
 private:
-	int size=0;
 	char* buf=NULL;
+	size_t size=-1;
+	MsgTypes messageType;
+	Address *address=NULL;
+	int id = -1;
+	short port = -1;
+	long heartbeat=-1;
 
 public:
 	Message();
-	Message(char *);
+	Message(char *,size_t size);
 	//JOINREQ message: JOINREQ, Address, Heartbeat
 	void SetJoiner(Address,long);
 	//JOINREP message: JOINREP,Address,Heartbeat,MemberEntryList
@@ -72,7 +77,7 @@ public:
 	long getHeartbeat();
 	vector<MemberListEntry> getMemberListEntry();
 	char* getBuf();
-	int getSize();
+	size_t getSize();
 };
 
 class MP1Node {

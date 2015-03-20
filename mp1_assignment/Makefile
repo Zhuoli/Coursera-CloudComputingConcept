@@ -11,8 +11,8 @@ CFLAGS =  -Wall -g -std=c++11
 
 all: Application
 
-Application: MP1Node.o EmulNet.o Application.o Log.o Params.o Member.o  
-	g++ -o Application MP1Node.o EmulNet.o Application.o Log.o Params.o Member.o ${CFLAGS}
+Application: MP1Node.o EmulNet.o Application.o Log.o Params.o Member.o UnitTest.o 
+	g++ -o Application MP1Node.o EmulNet.o Application.o Log.o Params.o Member.o UnitTest.o ${CFLAGS}
 
 MP1Node.o: MP1Node.cpp MP1Node.h Log.h Params.h Member.h EmulNet.h Queue.h
 	g++ -c MP1Node.cpp ${CFLAGS}
@@ -31,6 +31,10 @@ Params.o: Params.cpp Params.h
 
 Member.o: Member.cpp Member.h
 	g++ -c Member.cpp ${CFLAGS}
+	
+UnitTest.o: UnitTest.cpp UnitTest.h Member.h MP1Node.h
+	g++ -c UnitTest.cpp ${CFLAGS}
+
 
 clean:
 	rm -rf *.o Application dbg.log msgcount.log stats.log machine.log
