@@ -60,6 +60,7 @@ private:
 	int id = -1;
 	short port = -1;
 	long heartbeat=-1;
+	vector<MemberListEntry> memberList;
 
 public:
 	Message();
@@ -88,7 +89,7 @@ private:
 	Member *memberNode;
 	char NULLADDR[6];
 	void handleJoinRequest(Message*);
-	void handleGossipyRequest(char *, int);
+	void handleGossipyRequest(Message*);
 	void propagateMemberList(MemberListEntry, Member *);
 
 public:
